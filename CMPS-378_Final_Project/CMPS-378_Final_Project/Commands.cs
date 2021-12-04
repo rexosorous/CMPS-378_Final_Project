@@ -10,12 +10,13 @@ namespace DiscordBot
         {
             Console.WriteLine("test executed");
             await ReplyAsync("hello world");
+            // lorem ipsum dolor sit amet
         }
 
 
         [Command("ping")]
         [Alias("pong", "hello")]
         public Task PingAsync()
-            => ReplyAsync("pong!");
+            => ReplyAsync("pong!");]
     }
 }
