@@ -11,6 +11,7 @@ namespace DiscordBot
             Console.WriteLine("test executed");
             await ReplyAsync("hello world");
             // lorem ipsum dolor sit amet
+            // CMPS 378 Project
         }
 
 
