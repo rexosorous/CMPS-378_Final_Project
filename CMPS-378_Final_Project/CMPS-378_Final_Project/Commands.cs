@@ -10,14 +10,20 @@ namespace DiscordBot
         {
             Console.WriteLine("test executed");
             await ReplyAsync("hello world");
-            // lorem ipsum dolor sit amet
-            // CMPS 378 Project
         }
 
 
         [Command("ping")]
         [Alias("pong", "hello")]
         public Task PingAsync()
-            => ReplyAsync("pong!");]
+            => ReplyAsync("pong!");
+
+
+        [Command("youtube", RunMode=RunMode.Async)]
+        public async Task Youtube([Remainder] string url)
+        {
+            AudioHandler yt = new AudioHandler();
+            await yt.getSongBySearch(url);
+        }
     }
 }
