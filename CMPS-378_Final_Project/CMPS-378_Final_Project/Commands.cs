@@ -7,26 +7,9 @@ namespace DiscordBot
     {
         public AudioHandler AudioHandler { get; set; }
 
-        [Command("ping")]
-        [Alias("pong", "hello")]
-        public Task PingAsync()
-            => ReplyAsync("pong!");
-
-        [Command("join", RunMode = RunMode.Async)]
-        [Alias("j")]
-        public async Task JoinChannel(IVoiceChannel channel = null)
-        {
-            channel = channel ?? (Context.User as IGuildUser)?.VoiceChannel;
-            if (channel == null)
-            {
-                await Context.Channel.SendMessageAsync("User must be in a voice channel.");
-                return;
-            }
-            await AudioHandler.JoinChannel(channel);
-        }
 
         [Command("disconnect", RunMode = RunMode.Async)]
-        [Alias("dc")]
+        [Alias("dc", "stop", "leave")]
         public async Task LeaveChannel(IVoiceChannel Channel = null)
         {
             Channel = Channel ?? (Context.User as IGuildUser)?.VoiceChannel;
@@ -47,13 +30,20 @@ namespace DiscordBot
                 await Context.Channel.SendMessageAsync("User must be in a voice channel.");
                 return;
             }
-            await AudioHandler.Play(url, Channel);
+            await AudioHandler.Play(url, Channel, Context);
         }
 
-        [Command("test")]
-        public async Task Test()
-        {
-            await AudioHandler.test();
-        }
+        [Command("queue", RunMode = RunMode.Async)]
+        public async Task Queue()
+            => await AudioHandler.checkQueue(Context);
+
+        [Command("skip")]
+        [Alias("next")]
+        public async Task Skip()
+            => AudioHandler.skipSong();
+
+        [Command("clear")]
+        public async Task Clear()
+            => AudioHandler.clearSongQueue(Context);
     }
 }
