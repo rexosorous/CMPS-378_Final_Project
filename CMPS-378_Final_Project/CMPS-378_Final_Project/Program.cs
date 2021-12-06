@@ -38,7 +38,6 @@ namespace DiscordBot
         private Task LogAsync(LogMessage log)
         {
             Console.WriteLine(log.ToString());
-
             return Task.CompletedTask;
         }
         private ServiceProvider ConfigureServices()
