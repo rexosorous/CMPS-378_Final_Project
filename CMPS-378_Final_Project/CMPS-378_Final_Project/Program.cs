@@ -2,6 +2,7 @@
 using Discord;
 using Discord.WebSocket;
 using Discord.Commands;
+
 namespace DiscordBot
 {
     class Program
