@@ -29,8 +29,6 @@ namespace DiscordBot
             return stream;
         }
 
-
-
         public async Task<System.IO.Stream> getSongBySearch(string searchPhrase)
         {
             /* Searches youtube and pulls the audio stream from the video at the top of the results

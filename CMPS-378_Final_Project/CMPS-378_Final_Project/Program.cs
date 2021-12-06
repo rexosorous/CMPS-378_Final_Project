@@ -2,7 +2,6 @@
 using Discord;
 using Discord.WebSocket;
 using Discord.Commands;
-
 namespace DiscordBot
 {
     class Program
@@ -35,14 +34,12 @@ namespace DiscordBot
                 await Task.Delay(Timeout.Infinite);
             }
         }
-
         private Task LogAsync(LogMessage log)
         {
             Console.WriteLine(log.ToString());
 
             return Task.CompletedTask;
         }
-
         private ServiceProvider ConfigureServices()
         {
             return new ServiceCollection()
