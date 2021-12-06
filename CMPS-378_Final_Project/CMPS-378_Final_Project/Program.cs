@@ -47,6 +47,7 @@ namespace DiscordBot
                 .AddSingleton<CommandService>()
                 .AddSingleton<CommandHandler>()
                 .AddSingleton<HttpClient>()
+                .AddSingleton<AudioHandler>()
                 .BuildServiceProvider();
         }
     }
