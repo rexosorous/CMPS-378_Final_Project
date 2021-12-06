@@ -1,10 +1,8 @@
-using CliWrap;
 using Discord;
 using Discord.Audio;
 using Discord.WebSocket;
-using YoutubeExplode;
-using YoutubeExplode.Common;
-using YoutubeExplode.Videos.Streams;
+using System.Diagnostics;
+
 
 namespace DiscordBot
 {
@@ -14,6 +12,8 @@ namespace DiscordBot
 
         private readonly DiscordSocketClient discord;
         private IAudioClient voiceClient;
+        private Queue<string> songQueue = new Queue<string>();
+        private bool isPlaying = false;
 
         public AudioHandler(DiscordSocketClient discord)
         {
@@ -28,61 +28,45 @@ namespace DiscordBot
 
         public async Task Play(string url, IVoiceChannel channel)
         {
+            /* General function to play songs.
+             * Smartly joins the voice channel, starts playing audio, and then disconnects.
+             * If called while already playing audio, this function will add songs to the queue instead.
+             * 
+             * Args:
+             *      url (string): can either be the youtube link or a search term
+             *      channel (IVoiceChannel): the voice channel of the user invoking this command
+             */
+
             if (voiceClient == null || voiceClient.ConnectionState == ConnectionState.Disconnected) await JoinChannel(channel);
+            songQueue.Enqueue(url);
+            if (isPlaying) return;
+            isPlaying = true;
+            AudioOutStream voice = null;
 
-            var stream = await getSongByURL(url);
-
-            var memoryStream = new MemoryStream();
-            await Cli.Wrap("ffmpeg")
-                .WithArguments(" -hide_banner -loglevel panic -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1")
-                .WithStandardInputPipe(PipeSource.FromStream(stream))
-                .WithStandardOutputPipe(PipeTarget.ToStream(memoryStream))
-                .ExecuteAsync();
-
-            using (var voice = voiceClient.CreatePCMStream(AudioApplication.Mixed))
+            while (songQueue.Count > 0)
             {
-                try { await voice.WriteAsync(memoryStream.ToArray(), 0, (int)memoryStream.Length); }
-                finally { await voice.FlushAsync(); }
+                ProcessStartInfo cmd = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $@"/C youtube-dl --no-check-certificate -f bestaudio --default-search ytsearch -o - ""{songQueue.Dequeue()}"" | ffmpeg -i pipe:0 -f s16le -ar 48000 -ac 2 pipe:1",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                };
+                var ffmpeg = Process.Start(cmd);
+                var output = ffmpeg.StandardOutput.BaseStream;
+                if (voice == null) voice = voiceClient.CreatePCMStream(AudioApplication.Mixed, 96000);
+                await output.CopyToAsync(voice);
+                await voice.FlushAsync();
             }
 
-            await LeaveChannel();
+            isPlaying = false;
+            LeaveChannel();
         }
 
-        public async Task<System.IO.Stream> getSongByURL(string url)
+        public async Task test()
         {
-            /* Fetches an audio stream from youtube from it's URL
-             * 
-             * Arguments:
-             *      url (string): the url of the video to get the stream from
-             *      
-             * Returns:
-             *      stream (System.IO.Stream): the audio stream that can be played by ffmpeg in Discord.Net
-             */
-            YoutubeClient youtube = new YoutubeClient();
-            /* var videoData = await youtube.Videos.GetAsync(url);
-            Console.WriteLine(videoData.Title);
-            Console.WriteLine(videoData.Id); */
-
-            var streamManifest = await youtube.Videos.Streams.GetManifestAsync(url);
-            var streamInfo = streamManifest.GetAudioOnlyStreams().OrderBy(s => s.Bitrate).First();
-            System.IO.Stream stream = await youtube.Videos.Streams.GetAsync(streamInfo);
-            return stream;
-        }
-
-        public async Task<System.IO.Stream> getSongBySearch(string searchPhrase)
-        {
-            /* Searches youtube and pulls the audio stream from the video at the top of the results
-             * After searching and getting the top result, calls getSongByURL()
-             * 
-             * Arguments:
-             *      searchPhrase (string): the phrase used to search for
-             *      
-             * Returns:
-             *      (System.IO.Stream): the audio stream that can be played by ffmpeg in Discord.Net
-             */
-            YoutubeClient youtube = new YoutubeClient();
-            var searchResults = await youtube.Search.GetVideosAsync(searchPhrase);
-            return await getSongByURL(searchResults[0].Url);
+            Console.WriteLine(songQueue.Count);
         }
     }
 }

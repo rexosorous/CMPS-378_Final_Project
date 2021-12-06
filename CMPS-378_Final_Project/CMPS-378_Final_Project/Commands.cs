@@ -49,5 +49,11 @@ namespace DiscordBot
             }
             await AudioHandler.Play(url, Channel);
         }
+
+        [Command("test")]
+        public async Task Test()
+        {
+            await AudioHandler.test();
+        }
     }
 }
