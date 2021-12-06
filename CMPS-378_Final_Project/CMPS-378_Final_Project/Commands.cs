@@ -37,5 +37,19 @@ namespace DiscordBot
             var guildId = channel.Guild.Id;
             var audioClient = await channel.ConnectAsync();
         }
+
+        [Command("disconnect", RunMode = RunMode.Async)]
+        [Alias("dc")]
+        public async Task LeaveChannel(IVoiceChannel Channel = null)
+        {
+            Channel = Channel ?? (Context.User as IGuildUser)?.VoiceChannel;
+            if (Channel == null)
+            {
+                await Context.Channel.SendMessageAsync("User must be in a voice channel.");
+                return;
+            }
+            var guildId = Channel.Guild.Id;
+            var audioClient = await Channel.ConnectAsync();
+        }
     }
 }
