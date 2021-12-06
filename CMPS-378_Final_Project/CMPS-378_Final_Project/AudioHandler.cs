@@ -6,13 +6,27 @@ using System.Diagnostics;
 
 namespace DiscordBot
 {
+    public struct SongInfo
+    {
+        public string title { get; }
+        public string videoURL { get; }
+        public string thumbnailURL { get; }
+        public string duration { get; }
+
+        public SongInfo(string title, string videoURL, string thumbnailURL, string duration) : this()
+        {
+            this.title = title;
+            this.videoURL = videoURL;
+            this.thumbnailURL = thumbnailURL;
+            this.duration = duration;
+        }
+    }
+
     public class AudioHandler
     {
-        /* Class that handles all interactions with youtube using YoutubeExplode https://github.com/Tyrrrz/YoutubeExplode */
-
         private readonly DiscordSocketClient discord;
         private IAudioClient voiceClient;
-        private Queue<string> songQueue = new Queue<string>();
+        private Queue<SongInfo> songQueue = new Queue<SongInfo>();
         private bool isPlaying = false;
 
         public AudioHandler(DiscordSocketClient discord)
@@ -21,10 +35,13 @@ namespace DiscordBot
         }
 
         public async Task JoinChannel(IVoiceChannel channel)
-            => voiceClient =  await channel.ConnectAsync();
+            => voiceClient = await channel.ConnectAsync();
 
         public async Task LeaveChannel()
-            => await voiceClient.StopAsync();
+        {
+            await voiceClient.StopAsync();
+            songQueue.Clear();
+        }
 
         public async Task Play(string url, IVoiceChannel channel)
         {
@@ -35,20 +52,22 @@ namespace DiscordBot
              * Args:
              *      url (string): can either be the youtube link or a search term
              *      channel (IVoiceChannel): the voice channel of the user invoking this command
+             *      context (SocketCommandContext): used for sending messages to discord
              */
 
             if (voiceClient == null || voiceClient.ConnectionState == ConnectionState.Disconnected) await JoinChannel(channel);
-            songQueue.Enqueue(url);
+            songQueue.Enqueue(GetSongInfo(url));
             if (isPlaying) return;
             isPlaying = true;
             AudioOutStream voice = null;
 
             while (songQueue.Count > 0)
             {
+                var songInfo = songQueue.Dequeue();
                 ProcessStartInfo cmd = new ProcessStartInfo
                 {
                     FileName = "cmd.exe",
-                    Arguments = $@"/C youtube-dl --no-check-certificate -f bestaudio --default-search ytsearch -o - ""{songQueue.Dequeue()}"" | ffmpeg -i pipe:0 -f s16le -ar 48000 -ac 2 pipe:1",
+                    Arguments = $@"/C youtube-dl --no-check-certificate --no-playlist -f bestaudio --default-search ytsearch -o - ""{songInfo.videoURL}"" | ffmpeg -i pipe:0 -f s16le -ar 48000 -ac 2 pipe:1",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     CreateNoWindow = true
@@ -62,6 +81,37 @@ namespace DiscordBot
 
             isPlaying = false;
             LeaveChannel();
+        }
+
+        public SongInfo GetSongInfo(string url)
+        {
+            /* Gets basic information about the song being queued
+             *      Title
+             *      Video ID
+             *      Thumbnail URL
+             *      Duration
+             *      
+             * Args:
+             *      url (string): the video URL or search term to be queued
+             *      
+             * Returns:
+             *      (SongInfo): a basic struct containing the song information
+             */
+
+            ProcessStartInfo youtube = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $@"/C youtube-dl --get-title --get-id --get-thumbnail --get-duration --no-playlist --skip-download --default-search ytsearch ""{url}""",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true
+            };
+            var yt = Process.Start(youtube);
+            string title = yt.StandardOutput.ReadLine();
+            string videoID = yt.StandardOutput.ReadLine();
+            string thumbnailURL = yt.StandardOutput.ReadLine();
+            string duration = yt.StandardOutput.ReadLine();
+            return new SongInfo(title, "https://www.youtube.com/watch?v=" + videoID, thumbnailURL, duration);
         }
 
         public async Task test()
